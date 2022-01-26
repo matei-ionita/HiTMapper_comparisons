@@ -165,18 +165,20 @@ get_time <- function(x) {
 
 get_labels <- function(joint_tall, algo_name) {
   phenos <- unique(joint_tall$cell_type)
+  rows <- lapply(phenos, function(pheno) which(joint_tall$cell_type==pheno))
+  names(rows) <- phenos
+
   gating <- joint_tall$gating
   algo <- pull(joint_tall, algo_name)
 
   labels <- tibble(cell_type=phenos,
                    M=sapply(phenos, function(pheno) {
-                     max(c(joint_tall$gating[which(joint_tall$cell_type==pheno)],
-                           joint_tall$HiTMapper[which(joint_tall$cell_type==pheno)]))
+                     max(c(gating[rows[[pheno]]],
+                           algo[rows[[pheno]]]))
                    }),
                    label=sapply(phenos, function(pheno) {
-                     sel <- which(joint_tall$cell_type==pheno)
-                     x <- joint_tall$HiTMapper[sel]
-                     y <- joint_tall$gating[sel]
+                     x <- algo[rows[[pheno]]]
+                     y <- gating[rows[[pheno]]]
                      paste("rho =", round(cor(x, y, method="spearman"),3))
                    }))
 }
