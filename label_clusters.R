@@ -1,13 +1,19 @@
-extract_features_from_clusters <- function(cluster_mapping, sample_mapping) {
+
+###############################################
+# assuming that cluster_mapping is a factor
+# and sample_mapping is a character vector...
+# fix later?
+###############################################
+extract_features_from_clusters <- function(cluster_mapping, sample_mapping, data) {
   # features
-  base <- unname(table(samples_mapping)) %>% as.numeric()
+  base <- unname(table(sample_mapping)) %>% as.numeric()
   tab <- table(cluster_mapping, sample_mapping) %>% as.matrix()
   feat <- apply(tab, 1, function(row) row/base)
   if (length(base) == 1)
     feat <- as.matrix(feat) %>% t()
 
   # cluster centroids
-  comms <- unique(cluster_mapping)
+  comms <- levels(cluster_mapping)
   comm_events <- lapply(comms, function(comm) which(cluster_mapping==comm))
   centroids <- sapply(comm_events, function(events) {
     apply(data[events,,drop=FALSE],2,median)
@@ -74,4 +80,50 @@ match_defs <- function(defs, modality) {
   ind[which(ind==0)] <- nrow(defs)+1
   return(ind)
 }
+
+
+
+
+####################################################
+# Extract metadata from sample names
+####################################################
+get_meta <- function(sample_names, design) {
+  if (design == "CaCo") {
+    meta <- tibble(subject = sample_names,
+                   cohort = sapply(sample_names, get_cohort))
+    return(meta)
+  }
+
+  meta <- tibble(subject = sample_names %>%
+                   str_split("[._]+") %>%
+                   sapply(get_sample),
+                 time = sample_names %>%
+                   str_split("[._]+") %>%
+                   sapply(get_time))
+
+  return(meta)
+}
+
+get_cohort <- function(name) {
+  if(substr(name,1,2) %in% c("HD","ND"))
+    return("control")
+  else
+    return("case")
+}
+
+get_sample <- function(x) {
+  if (substr(x[[1]],1,1) == "H")
+    return("HD")
+  return(x[[1]])
+}
+
+get_time <- function(x) {
+  if (length(x) == 2)
+    return(x[[2]])
+  if (substr(x[[1]],1,1) == "H")
+    return(x[[1]] %>% str_remove("HD") %>% str_remove("H"))
+  return(paste0(x[[2]], "_", x[[3]]))
+}
+
+
 

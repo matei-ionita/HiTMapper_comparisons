@@ -13,7 +13,7 @@ process_gating <- function(gating, design) {
   gating_feat$`B cells Naive` <- gating_feat$`Naive IgD+`
   gating_feat$`B cells CD27neg` <- gating_feat$`CD27-B`
 
-  meta_gating <- get_sample_time(gating$file %>% str_remove("_Normalized.fcs"),
+  meta_gating <- get_meta(gating$file %>% str_remove("_Normalized.fcs"),
                                  design=design)
   gating_feat <- cbind(meta_gating, gating_feat)
 
@@ -124,7 +124,7 @@ select_and_pivot <- function(feat, keep, method) {
 }
 
 
-get_sample_time <- function(sample_names, design) {
+get_meta <- function(sample_names, design) {
   if (design == "CaCo") {
     meta <- tibble(subject = sample_names,
                    cohort = sapply(sample_names, get_cohort))

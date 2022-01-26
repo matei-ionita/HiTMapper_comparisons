@@ -5,7 +5,6 @@ data_dir <- "."
 dataset <- "acute"
 file_path <- paste0(data_dir, "/data_", dataset, ".rda")
 load(file_path)
-defs <- read_csv("maxpar_phenos_functional.csv")
 
 # Drop unwanted markers
 pregating <- c("Live")
@@ -25,6 +24,7 @@ mapper <- HiTMapper(data, total_nodes=1500, outlier_cutoff=200, overlap = 0.15)
 end_time <- Sys.time()
 print(end_time-start_time)
 
+defs <- read_csv("maxpar_phenos_functional.csv")
 mapper <- extract_features(data, samples, mapper)
 mapper <- label_communities(mapper, defs)
 
