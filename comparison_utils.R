@@ -5,16 +5,19 @@ process_gating <- function(gating, design) {
   gating_feat <- apply(gating_feat, 2, function(x) x/gating_feat$`CD45+|percent_total`) %>%
     as_tibble()
   names(gating_feat) <- str_remove_all(names(gating_feat), fixed("|percent_total"))
-  gating_feat$`CD8 mem` <- gating_feat[,which(grepl("CD8 TEM", names(gating_feat)) | grepl("CD8 TCM", names(gating_feat)))] %>%
-    apply(1, sum)
-  gating_feat$`CD4 mem` <- gating_feat[,which(grepl("CD4 TEM", names(gating_feat)) | grepl("CD4 TCM", names(gating_feat)))] %>%
-    apply(1, sum)
+
+  cd8mem <- which(grepl("CD8 TEM", names(gating_feat)) | grepl("CD8 TCM", names(gating_feat)))
+  gating_feat$`CD8 mem` <- gating_feat[,cd8mem] %>% apply(1, sum)
+
+  cd4mem <- which(grepl("CD4 TEM", names(gating_feat)) | grepl("CD4 TCM", names(gating_feat)))
+  gating_feat$`CD4 mem` <- gating_feat[,cd4mem] %>% apply(1, sum)
+
   gating_feat$`B cells mem` <- gating_feat$`Total Memory B cells`
   gating_feat$`B cells Naive` <- gating_feat$`Naive IgD+`
   gating_feat$`B cells CD27neg` <- gating_feat$`CD27-B`
 
-  meta_gating <- get_meta(gating$file %>% str_remove("_Normalized.fcs"),
-                                 design=design)
+  file_names <- gating$file %>% str_remove("_Normalized.fcs")
+  meta_gating <- get_meta(file_names,design=design)
   gating_feat <- cbind(meta_gating, gating_feat)
 
   return(gating_feat)
@@ -22,73 +25,11 @@ process_gating <- function(gating, design) {
 
 process_algo <- function(features, design) {
   cols <- names(features)
+  col_groups <- aggregate_cols(cols)
 
-  bcell <- which(grepl("Bcells", cols))
-  bcell_naive <- which(grepl("Bcells_Naive", cols))
-  bcell_27neg <- which(grepl("Bcells_Naive", cols) |
-                         grepl("CD27negIgDneg", cols))
-  bcell_mem <- which(grepl("switch", cols))
-  bcell_pb <- which(grepl("Bcells_PB", cols))
-
-  tcell <- which(grepl("Tcells", cols))
-
-  tcell_cd8 <- which(grepl("CD8", cols))
-  tcell_cd8_naive <- which(grepl("CD8Tcells_Naive", cols))
-  tcell_cd8_mem <- setdiff(tcell_cd8, tcell_cd8_naive)
-  tcell_cd8_mem_act <- which(grepl("CD8Tcells_Mem", cols) & grepl("act", cols))
-
-  tcell_cd4 <- which(grepl("CD4", cols))
-  tcell_cd4_naive <- which(grepl("CD4Tcells_Naive", cols))
-  tcell_cd4_mem <- setdiff(tcell_cd4, tcell_cd4_naive)
-  tcell_cd4_mem_act <- which(grepl("CD4Tcells", cols) & grepl("act", cols))
-
-  tfh <- which(grepl("Tfh", cols))
-  th1 <- which(grepl("Th1", cols) & !grepl("Th17", cols))
-  th2 <- which(grepl("Th2", cols))
-  # th17 <- which(grepl("Th17", cols) & !grepl("Th1", cols))
-  th17 <- which(grepl("Th17", cols))
-
-  tcell_gd <- which(grepl("gd", cols))
-  nk <- which(grepl("Nkcells", cols))
-  lymph <- union_all(bcell, tcell, nk)
-
-  pdc <- which(grepl("pDC", cols))
-  mdc <- which(grepl("mDC", cols))
-  mono <- which(grepl("Monocyte", cols))
-
-  eos <- which(grepl("Eosinophils", cols))
-  bas <- which(grepl("Basophils", cols))
-  neu <- which(grepl("Neutrophil", cols))
-
-  algo_feat <- tibble(Lymphocytes = apply(features[,lymph,drop=FALSE], 1, sum),
-                        `B cells` = apply(features[,bcell,drop=FALSE], 1, sum),
-                        `B cells mem` = apply(features[,bcell_mem,drop=FALSE], 1, sum),
-                        `B cells Naive` = apply(features[,bcell_naive,drop=FALSE], 1, sum),
-                        `B cells CD27neg` = apply(features[,bcell_27neg,drop=FALSE], 1, sum),
-                        Plasmablasts = apply(features[,bcell_pb,drop=FALSE], 1, sum),
-                        `T cells` = apply(features[,tcell,drop=FALSE], 1, sum),
-                        `CD8+ T` = apply(features[,tcell_cd8,drop=FALSE], 1, sum),
-                        `CD8 Naive` = apply(features[,tcell_cd8_naive,drop=FALSE], 1, sum),
-                        `CD8 mem` = apply(features[,tcell_cd8_mem,drop=FALSE], 1, sum),
-                        `activated nnCD8 T` = apply(features[,tcell_cd8_mem_act,drop=FALSE], 1, sum),
-                        `CD4+ T` = apply(features[,tcell_cd4,drop=FALSE], 1, sum),
-                        `CD4 Naive` = apply(features[,tcell_cd4_naive,drop=FALSE], 1, sum),
-                        `CD4 mem` = apply(features[,tcell_cd4_mem,drop=FALSE], 1, sum),
-                        `activated nnCD4 T` = apply(features[,tcell_cd4_mem_act,drop=FALSE], 1, sum),
-                        `NNCD4 T CXCR5+` = apply(features[,tfh,drop=FALSE], 1, sum),
-                        `Th1` = apply(features[,th1,drop=FALSE], 1, sum),
-                        `Th2` = apply(features[,th2,drop=FALSE], 1, sum),
-                        `Th17` = apply(features[,th17,drop=FALSE], 1, sum),
-                        `gd T cells` = apply(features[,tcell_gd,drop=FALSE], 1, sum),
-                        `Total Monocytes` = apply(features[,mono,drop=FALSE], 1, sum),
-                        `pDC` = apply(features[,pdc,drop=FALSE], 1, sum),
-                        `mDC` = apply(features[,mdc,drop=FALSE], 1, sum),
-                        `Total NK cells` = apply(features[,nk,drop=FALSE], 1, sum),
-                        Basophils = apply(features[,bas,drop=FALSE], 1, sum),
-                        Eosinophils = apply(features[,eos,drop=FALSE], 1, sum),
-                        Neutrophils = apply(features[,neu,drop=FALSE], 1, sum)
-  )
-
+  algo_feat <- sapply(col_groups, function(group) {
+    apply(features[,group,drop=FALSE], 1, sum)
+  })
 
   if (design=="CaCo")
     meta <- data.frame(subject = features$subject,
@@ -96,8 +37,55 @@ process_algo <- function(features, design) {
   else
     meta <- data.frame(subject = features$subject,
                        time = features$time)
+
   algo_feat <- cbind(meta, algo_feat)
   return(algo_feat)
+}
+
+
+aggregate_cols <- function(cols) {
+  cols <- cols %>% str_split(pattern=fixed(".")) %>%
+    sapply(function(x) x[1])
+
+  groups <- list()
+  groups[["B cells"]] <- which(grepl("Bcells", cols))
+  groups[["B cells Naive"]] <- which(grepl("Bcells_Naive", cols))
+  groups[["B cells CD27neg"]] <- which(grepl("Bcells_Naive", cols) |
+                         grepl("CD27negIgDneg", cols))
+  groups[["B cells mem"]] <- which(grepl("switch", cols))
+  groups[["Plasmablasts"]] <- which(grepl("Bcells_PB", cols))
+
+  groups[["T cells"]] <- which(grepl("Tcells", cols))
+
+  groups[["CD8+ T"]] <- which(grepl("CD8", cols))
+  groups[["CD8 Naive"]] <- which(grepl("CD8Tcells_Naive", cols))
+  groups[["CD8 mem"]] <- which(grepl("CD8", cols) & !grepl("Naive", cols))
+  groups[["activated nnCD8 T"]] <- which(grepl("CD8Tcells_Mem", cols) & grepl("act", cols))
+
+  groups[["CD4+ T"]] <- which(grepl("CD4", cols))
+  groups[["CD4 Naive"]] <- which(grepl("CD4Tcells_Naive", cols))
+  groups[["CD4 mem"]] <- which(grepl("CD4", cols) & !grepl("Naive", cols))
+  groups[["activated nnCD4 T"]] <- which(grepl("CD4Tcells", cols) & grepl("act", cols))
+
+  groups[["NNCD4 T CXCR5+"]] <- which(grepl("Tfh", cols))
+  groups[["Th1"]] <- which(grepl("Th1", cols) & !grepl("Th17", cols))
+  groups[["Th2"]] <- which(grepl("Th2", cols))
+  # th17 <- which(grepl("Th17", cols) & !grepl("Th1", cols))
+  groups[["Th17"]] <- which(grepl("Th17", cols))
+
+  groups[["gd T cells"]] <- which(grepl("gd", cols))
+  groups[["Total NK cells"]] <- which(grepl("Nkcells", cols))
+  groups[["Lymphocytes"]] <- union(union(groups[["B cells"]], groups[["T cells"]]),
+                                   groups[["Total NK cells"]])
+
+  groups[["pDC"]] <- which(grepl("pDC", cols))
+  groups[["mDC"]] <- which(grepl("mDC", cols))
+  groups[["Total Monocytes"]] <- which(grepl("Monocyte", cols))
+
+  groups[["Eosinophils"]] <- which(grepl("Eosinophils", cols))
+  groups[["Basophils"]] <- which(grepl("Basophils", cols))
+  groups[["Neutrophils"]] <- which(grepl("Neutrophil", cols))
+  return(groups)
 }
 
 
@@ -182,5 +170,80 @@ get_labels <- function(joint_tall, algo_name) {
                      paste("rho =", round(cor(x, y, method="spearman"),3))
                    }))
 }
+
+
+
+
+########################################################
+# BACKGATING
+########################################################
+
+
+backgate <- function(data, params, background, cluster) {
+  background <- setdiff(background, cluster)
+
+  js <- js_divergence(x=data[background,params],
+                      y=data[cluster,params]) %>%
+    round(digits=3)
+
+  x_max <- max(7, data[c(background,cluster),params[1]])
+  y_max <- max(7, data[c(background,cluster),params[2]])
+
+  ff <- flowFrame(exprs=data[background,params])
+  p <- ggflow(ff, params=params, trans_fl = "asinh",
+              xlim=c(0,x_max),
+              ylim=c(0,y_max))
+
+  df <- data.frame(data[cluster,params], check.names=FALSE)
+
+  p+new_scale_fill()+
+    geom_bin2d(data=df, mapping=aes(.data[[params[1]]],.data[[params[2]]]),
+               bins=750,na.rm=TRUE) +
+    viridis::scale_fill_viridis(option = "rocket") +
+    annotate("text", label=paste("JS divergence:", js),
+             x=x_max/2, y=y_max-0.5, size=10)
+}
+
+save_backgate <- function(data, params, background, cluster,
+                          path_base) {
+  p <-  backgate(data, params, background, cluster)
+
+  png(paste0(path_base, "_", params[1], "_", params[2], ".png"),
+      width=800, height=700)
+  plot(p)
+  dev.off()
+}
+
+
+standardize <- function(x, tol=1e-12) {
+  m <- mean(x)
+  s <- sd(x)
+
+  if(s < tol)
+    return(x-m)
+  return((x-m)/s)
+}
+
+
+js_divergence <- function(x,y,bins=256) {
+  lims <- list(c(min(c(x[,1],y[,1])),max(c(x[,1],y[,1]))),
+               c(min(c(x[,2],y[,2])),max(c(x[,2],y[,2]))))
+  bw <- vapply(lims, function(lim) (lim[2]-lim[1])/bins, numeric(1))/2
+  p <- KernSmooth::bkde2D(x,bandwidth=bw,
+                          gridsize=c(bins,bins),
+                          range.x = lims)$fhat
+  p <- p/sum(p)
+  q <- KernSmooth::bkde2D(y,bandwidth=bw,
+                          gridsize=c(bins,bins),
+                          range.x = lims)$fhat
+  q <- q/sum(q)
+  m <- 0.5*(p+q)
+  KL1 <- p*log(p/m,base=2)
+  KL2 <- q*log(q/m,base=2)
+
+  js <- 0.5*sum(KL1[which(p>0)], KL2[which(q>0)])
+}
+
+
 
 

@@ -44,6 +44,9 @@ features <- data.frame(post$features)
 labels <- label_clusters(post$centroids, defs)
 names(features) <- labels
 
+meta <- get_meta(row.names(features), design="CaCo")
+features <- cbind(meta,features)
+
 write_csv(features, "features/FlowSOM.csv")
 
 

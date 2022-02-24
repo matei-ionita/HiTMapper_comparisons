@@ -1,4 +1,5 @@
 library(tidyverse)
+# library(plyr)
 source("comparison_utils.R")
 
 design <- "CaCo"
@@ -19,7 +20,7 @@ joint_tall <- join_features(gating_feat, algo_feat, algo_name)
 labels <- get_labels(joint_tall, algo_name)
 
 
-pdf("mapper_vs_gating_clean.pdf", width=12, height=9)
+pdf("mapper_vs_gating.pdf", width=12, height=9)
 ggplot(joint_tall, aes_string(y="gating", x=algo_name)) +
   facet_wrap(~cell_type, scales="free") +
   geom_point(size=2, aes(color=subject)) +
