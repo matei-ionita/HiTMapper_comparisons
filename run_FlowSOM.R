@@ -25,14 +25,15 @@ sam <- samples[sel]
 ####################################################
 ############### Run the algorithm ##################
 ####################################################
-
+start_time <- Sys.time()
 set.seed(4003)
 # For the final run (with all data), try something
 # like 25x25 grid, with nClus=50 or 60?
 fsom <- FlowSOM(dat, colsToUse = colnames(dat),
                 xdim=25, ydim=25, nClus=50)
 cluster_mapping <- GetMetaclusters(fsom)
-
+end_time <- Sys.time()
+print(end_time-start_time)
 
 ####################################################
 # Post-processing: feature extraction and labeling #
