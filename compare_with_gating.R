@@ -2,11 +2,12 @@ library(tidyverse)
 # library(plyr)
 source("comparison_utils.R")
 
+cohort <- "acute"
 design <- "CaCo"
 # design <- "longitudinal"
 algo_name <- "HiTMapper"
 
-features <- read_csv("features/HiTMapper.csv")
+features <- read_csv("features/" %+% cohort %+% "_" %+% algo_name %+% ".csv")
 gating <- read_csv("Acute_COVID—AP_Acute COVID—Export Statistics—210714_2018.csv")
 
 
