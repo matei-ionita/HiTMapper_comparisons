@@ -1,0 +1,410 @@
+---
+title: "Algorithm Comparison"
+author: "Van Truong"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+# let's load in the libraries / packages
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(FlowSOM)
+library(flowCore)
+library(umap)
+library(funtimes)
+library(Rphenograph)
+library(HiTMapper)
+```
+
+#####################################
+############ Load in Data ###########
+#####################################
+
+```{r}
+# let's load in the data
+ff <- read.FCS("Levine_32dim.fcs", truncate_max_range = FALSE)
+pheno <- read_csv("levine_phenos_simple.csv")
+
+
+# we notice that the last couple of columns in ff is weird
+# save data as matrix and input a list of columns you want to remove
+keep_channels <- setdiff(colnames(ff), c("Time", "Cell_length", "DNA1", "DNA2", "Viability",
+                                         "file_number", "event_number", "label", "individual"))
+data <- exprs(ff)[,keep_channels]
+
+# this string replace function can take in whatever character string and do a pattern replacement
+colnames(data) <- str_replace(colnames(data), "/", ".") # redundant bc this file doesn't have slashes in column name
+```
+
+
+##################################################
+############ Downsample Data for UMAP ############ 
+##################################################
+# we can downsample the data a lil and run UMAP on that
+```{r}
+set.seed(1116) # set a random seed before we randomly select rows in our downsample
+sample20k <- sample(nrow(data), size=20000) # need to do nrow(data) to grab 20K rows instead of 20K values throughout data
+head(sample20k) # this shows the row numbers
+```
+# save a separate matrix that only contains these rows
+```{r}
+small_data <- data[sample20k, ] # data has 2 dimensions so we specify the indices/columns it should use so use the column to tell it to use all of the columns
+```
+
+
+#################################################### 
+############ Run UMAP to Spotcheck Data ############ 
+#################################################### 
+# run umap but it may take a little while
+```{r}
+start_time_0 <- Sys.time()
+
+umap_20k <- umap(small_data)
+
+end_time_0 <- Sys.time()
+final_time_0 <- end_time_0-start_time_0
+print(final_time_0)
+```
+
+# next assign the umap outputs as cols 1 and 2 in a tibble dataframe called "dim_red" = dimensional reduction
+```{r}
+dim_red <- tibble(umap1=umap_20k$layout[,1],
+                  umap2=umap_20k$layout[,2])
+```
+
+# visualize the umap data using ggplot which was imported by tidyverse
+```{r}
+ggplot(dim_red, aes(x=umap1, y=umap2)) +
+  geom_point() +
+  theme_bw(base_size=14)
+```
+
+# ok we have a bunch of cell types based on the plot
+
+
+
+
+####################################################
+############ Run Clustering Algorithms ############# 
+####################################################
+
+```{r}
+# Set seed to 1116
+set.seed(1116)
+seed <- 1116
+
+# Initialize an empty dataframe to store the results
+results_df <- data.frame(nClus_resolution_k=numeric(0), package=character(0), execution_time=numeric(0))
+
+# Create a vector of nClust values to loop through for flowSOM
+nClus_values <- c(10, 15, 20)
+
+# Create a vector of k values to loop through for rphenograph
+k_values <- c(15, 30, 60, 120, 200, 400)
+
+# Create a vector of resolution values to loop through for HiTMapper
+resolution_values <- c(0.1, 0.25, 0.5, 0.75, 1)
+
+flowsom_outputs <- list()
+hitmapper_outputs <- list()
+phenograph_outputs <- list()
+
+# Create the directory path
+output_dir <- file.path("outputs")
+
+# Make sure the directory exists
+if (!file.exists(output_dir)) {
+  dir.create(output_dir)
+}
+
+# Loop through nClus values for flowSOM
+for (val in nClus_values) {
+  # Start the timer
+  start_time <- Sys.time()
+  # Run flowSOM with the current nClus value
+  result <- FlowSOM(data,  seed=seed, nClus = val)
+  print
+  # Append the result to the outputs list
+  flowsom_outputs[[val]] <- result
+  # End the timer
+  end_time <- Sys.time()
+  # Calculate the execution time
+  execution_time <- end_time - start_time
+  # Create a unique file name
+  filename <- paste0("flowsom_outputs_", val, ".rds")
+  # Create the file path
+  filepath <- file.path(output_dir, filename)
+  # Save the outputs to a .rds file
+  # saveRDS(result, file = filepath)
+  # Append the execution time to the results dataframe
+  results_df <- rbind(results_df, data.frame(nClus_resolution_k=val, package="FlowSOM", execution_time=execution_time))
+  # save dataframe to .csv
+  # write.csv(results_df, file = "runtime_flowsom.csv")
+}
+
+
+# Loop through resolution values for HiTMapper
+for (val in resolution_values) {
+  # Start the timer
+  start_time <- Sys.time()
+  # Run HiTMapper with the current resolution value
+  result <- HiTMapper(data, total_nodes = 1000, defs=pheno, resolution = val)
+  # Append the result to the outputs list
+  hitmapper_outputs[[val*100]] <- result # cannot index using decimals so need to multiply to get an integer
+  # End the timer
+  end_time <- Sys.time()
+  # Calculate the execution time
+  execution_time <- end_time - start_time
+  # Create a unique file name
+  filename <- paste0("hitmapper_outputs_", val*100, ".rds")
+  # Create the file path
+  filepath <- file.path(output_dir, filename)
+  # Save the outputs to a .rds file
+  # saveRDS(result, file = filepath)
+  # Append the execution time to the results dataframe
+  results_df <- rbind(results_df, data.frame(nClus_resolution_k=val, package="HiTMapper", execution_time=execution_time))
+  # save dataframe to .csv
+  # write.csv(results_df, file = "runtime_hitmapper.csv")
+}
+
+
+# Loop through k values for rPhenograph
+for (val in k_values) {
+  # Start the timer
+  start_time <- Sys.time()
+  # Run rPhenograph with the current k value
+  result <- Rphenograph(data, k = val)
+  # Append the result to the outputs list
+  phenograph_outputs[[val]] <- result
+  # End the timer
+  end_time <- Sys.time()
+  # Calculate the execution time
+  execution_time <- end_time - start_time
+  # Create a unique file name
+  filename <- paste0("phenograph_outputs_", val, ".rds")
+  # Create the file path
+  filepath <- file.path(output_dir, filename)
+  # Save the outputs to a .rds file
+  # saveRDS(result, file = filepath)
+  # Append the execution time to the results dataframe
+  results_df <- rbind(results_df, data.frame(nClus_resolution_k=val, package="rPhenograph", execution_time=execution_time))
+  # save dataframe to .csv
+  # write.csv(results_df, file = "runtime_phenograh.csv")
+}
+
+# The results dataframe now contains the nClus_resolution_k value and execution time for each iteration and package name
+
+```
+
+
+
+In both the examples, the execution time is being stored in the `execution_time` column of the `results_df` dataframe along with the corresponding `k_or_nClust` value in the `k_or_nClust` column and package name in the package column. This way, you can have all the execution time from both the packages in a single dataframe and further process the dataframe to extract the execution time for each k or nClust value and package.
+
+Please note that, in some cases, the system.time() function can be slightly more accurate than using the Sys.time() function, as it takes into account additional factors such as system load and other background processes that may affect the execution time.
+
+
+
+#####################################################
+############ Cluster Purity and Agreement ###########
+#####################################################
+```{r}
+groundtruth_gates <- ff@exprs[,"label"] # get the groundtruth gates 
+table(groundtruth_gates)
+```
+
+## TO-DO Figure out how to save the purity calculations to the same dataframe above
+
+```{r}
+# Initialize an empty dataframe to store the results
+metrics_df <- data.frame(nClus_resolution_k=numeric(0), package=character(0), purity_calc=numeric(0))
+
+# empty lists to store purity calculations
+flowsom_purity <- list()
+hitmapper_purity <- list()
+phenograph_purity <- list()
+
+# ground truth labels
+no_nan_groundtruth <- which(! is.na(groundtruth_gates))
+
+# flowSOM
+for (val in nClus_values) {
+  # get cluster assignments
+  fsom_clusters <- GetMetaclusters(fsom_outputs[[val]])
+  # purity calculation using algorithm clustering assignments and ground truth
+  purity_calc <- purity(groundtruth_gates[no_nan_groundtruth], flowsom_clusters[no_nan_groundtruth]) #purity score
+  # Append the execution time to the results dataframe
+  metrics_df <- rbind(metrics_df, data.frame(nClus_resolution_k=val, package="FlowSOM", purity_calc=purity_calc$pur))
+  # Store purity calculations in empty list
+  flowsom_purity[[val]] <- purity_calc
+}
+
+
+# hitmapper
+for (val in resolution_values) {
+  # get cluster assignments
+  hitmapper_clusters <- hitmapper_outputs[[val*100]]$clustering
+  # purity calculation using algorithm clustering assignments and ground truth
+  purity_calc <- purity(groundtruth_gates[no_nan_groundtruth], hitmapper_clusters[no_nan_groundtruth]) #purity score
+  # Append the execution time to the results dataframe
+  metrics_df <- rbind(metrics_df, data.frame(nClus_resolution_k=val, package="HiTMapper", purity_calc=purity_calc$pur))
+  # Store purity calculations in empty list
+  hitmapper_purity[[val*100]] <- purity_calc
+}
+
+
+# phenograph 
+for (val in k_values) {
+  # get cluster assignments
+  phenograph_clusters <- factor(membership(phenograph_outputs[[val]][[2]]))
+  # purity calculation using algorithm clustering assignments and ground truth
+  purity_calc <- purity(groundtruth_gates[no_nan_groundtruth], phenograph_clusters[no_nan_groundtruth]) #purity score
+  # Append the execution time to the results dataframe
+  metrics_df <- rbind(metrics_df, data.frame(nClus_resolution_k=val, package="Phenograph", purity_calc=purity_calc$pur))
+  # Store purity calculations in empty list
+  phenograph_purity[[val]] <- purity_calc
+}
+
+```
+
+
+
+
+####################################################
+############ Precision, Recall, F1 Score ########### 
+####################################################
+# next we need to compute F1 measure using this github page https://github.com/lmweber/cytometry-clustering-comparison/blob/master/helpers/helper_match_evaluate_multiple.R 
+
+```{r}
+true_positives <- sum(clus_algorithm == i_int & clus_truth == j_int, na.rm = TRUE)
+      detected <- sum(clus_algorithm == i_int, na.rm = TRUE)
+      truth <- sum(clus_truth == j_int, na.rm = TRUE)
+      
+      # calculate precision, recall, and F1 score
+      precision_ij <- true_positives / detected
+      recall_ij <- true_positives / truth
+      F1_ij <- 2 * (precision_ij * recall_ij) / (precision_ij + recall_ij)
+```
+
+
+
+
+
+
+
+
+##################################################
+############ Summary Comparison Table ############ 
+##################################################
+
+
+```{r}
+print(paste("For the following algorithms: UMAP completed in ", final_time_0, "mins, FlowSOM has a ", final_time_1, "mins, rPhenograph has a ", final_time_2, "mins, and HiTMapper has a ", final_time_3, "mins"))
+      
+print(paste("For the following algorithms - FlowSOM has purity of: ", purity_1$pur, ", rPhenograph has purity of: ", purity_2$pur, ", and HiTMapper has purity ", purity_3$pur))
+
+# df <- data.frame(algorithm=c('FlowSOM', 'RPhenograph', 'HiTMapper'),
+#                  speed=c(final_time_1, final_time_2, final_time_3),
+#                  purity=c(purity_1$pur, purity_2$pur, purity_3$pur),
+#                  precision=c(precision_1, precision_2, precision_3),
+#                  recall=c(recall_1, recall_2, recall_3),
+#                  F1_score=c(f1_1, f1_2, f1_3))
+df
+
+# maybe nix the precision and recall, just report F1 score because it's a common metric in these papers
+
+# UMAP isn't a clustering algorithm but just wanted to see what looks like in this lineup
+
+
+
+```
+
+
+
+
+
+
+
+
+####################################################
+############ Plot UMAP with OG Clusters ############ 
+####################################################
+
+# explore results some more
+```{r}
+hitmapper_result$clustering # explore this and all the other attributes and see what I can get out of these
+plot_mapper(hitmapper_result, markers = c())
+```
+
+
+
+
+# let's plot umap with the original levine clusters to see how it looks in comparison
+```{r}
+dim_red <- dim_red %>%
+  mutate(levine_cluster = as.factor(groundtruth_gates[sample20k])) 
+```
+
+
+# filter out the NaN, there's only 14 clusters in the Levine data set
+```{r}
+ggplot(dim_red %>% dplyr::filter(levine_cluster!="NaN"), aes(x=umap1, y=umap2, color=levine_cluster)) + 
+  geom_point(shape=1, size=0.5, alpha=0.5) +
+  guides(color = guide_legend(override.aes = 
+                                list(alpha = 1, size = 1, shape=19))) +
+  theme_bw(base_size=14)
+```
+
+
+
+####################################################
+############ Plot UMAP with new clusters ########### 
+####################################################
+# now let's make a umap plot with the clusters assigned on the umap
+```{r}
+dim_red <- dim_red %>%
+  mutate(fsom_cluster = fsom_clustering[sample20k]) 
+
+p1 <- ggplot(dim_red, aes(x=umap1, y=umap2, color=fsom_cluster)) +
+  geom_point(shape=1, size=0.5, alpha=0.5) +
+  guides(color = guide_legend(override.aes =
+                                list(alpha = 1, size = 1, shape=19))) +
+  theme_bw(base_size=14)
+
+plot(p1) # inspect the plot and make some observations
+
+# what about the unassigned NaN cells?
+```
+The two big islands near the bottom look like cluster 11 with some 10 in the middle so we would expect flowSOM to take a hit on accuracy measure because it classifies these two islands as the same cluster when we'd expect them to be different
+
+# looking at plots is nice but can we compute something
+```{r}
+groundtruth_gates <- ff@exprs[,"label"]
+table(groundtruth_gates)
+```
+
+
+####################################################
+############ Plot UMAP with new clusters ########### 
+####################################################
+# now let's make a umap plot with the clusters assigned on the umap
+```{r}
+dim_red <- dim_red %>%
+  mutate(phenograph_cluster = data$phenograph_cluster[sample20k]) # mutate adds/changes some column and we give it the name of the col we want to operate on (if it doesn't exist, it adds it from scratch)
+
+p2 <- ggplot(dim_red, aes(x=umap1, y=umap2, color=phenograph_cluster)) +
+  geom_point(shape=1, size=0.5, alpha=0.5) +
+  guides(color = guide_legend(override.aes =
+                                list(alpha = 1, size = 1, shape=19))) +
+  theme_bw(base_size=14)
+
+plot(p2) # inspect the plot and make some observations
+
+```
+
+
+
+
+
+
+# And maybe Scaffold if we can get it to work
