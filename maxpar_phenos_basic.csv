@@ -1,0 +1,18 @@
+Phenotype,CD66b,CD294,CD123,CD11c,CD14,CD38,CD56,CD19,CD20,CD3,CD45RA,HLA-DR,CD4,CD8a,TCRgd,CD197,CD27,CD185,CD183
+Neutrophils,hi,lo,lo,,,,,,lo,lo,,,,,,,,,
+Eosinophils,hi,hi,lo,,,,,,,,,,,,,,,,
+Monocytes Nonclassical,lo,,,hi,lo,,,lo,,lo,,,,,,,,,
+Monocytes Classical,lo,,,hi,hi,,,lo,,lo,,,,,,,,,
+mDC,lo,lo,,hi,lo,hi,,lo,,lo,,hi,,,,,,,
+pDC,lo,lo,hi,lo,lo,,,lo,,lo,,hi,,,,,,,
+Basophils,lo,hi,hi,,,,,,,,,,,,,,,,
+NK cells,,,lo,,lo,,hi,,,lo,,,,,,,,,
+B cells,lo,,,,lo,,lo,hi,,lo,,,,,,,,,
+Plasmablasts,lo,lo,lo,lo,lo,hi,lo,,lo,lo,hi,,,,,,,,
+T cells CD4 Memory not Th1,lo,,,,lo,,,lo,lo,hi,,,hi,lo,lo,,,,
+T cells CD4 Memory Th1,lo,,,,lo,,,lo,lo,hi,,,hi,lo,lo,,,,hi
+T cells CD4 Tfh,lo,,,,lo,,,lo,lo,hi,,,hi,lo,lo,,,hi,
+T cells CD4 Naive,lo,,,,lo,,,lo,lo,hi,hi,,hi,lo,lo,hi,hi,,
+T cells CD8 Memory,lo,,,,lo,,,lo,lo,hi,,,lo,hi,lo,,,,
+T cells CD8 Naive,lo,,,,lo,,,lo,lo,hi,hi,,lo,hi,lo,hi,hi,,
+T cells gd,lo,,,,lo,,,lo,lo,hi,,,lo,lo,hi,,,,

@@ -1,0 +1,11 @@
+Phenotype,CD3,CD19,CD4,CD8,CD45RA,CCR7,CD27,Ki-67,CD16,Eomes
+tcell_cd4_mem,hi,lo,hi,lo,,,,,,
+tcell_cd4_mem_act,hi,lo,hi,lo,,,,hi,,
+tcell_cd4_naive,hi,lo,hi,lo,hi,hi,hi,,,
+tcell_cd8_mem,hi,lo,lo,hi,,,,,,
+tcell_cd8_mem_act,hi,lo,lo,hi,,,,hi,,
+tcell_cd8_naive,hi,lo,lo,hi,hi,hi,hi,,,
+tcell_dn,hi,lo,lo,lo,,,,,,
+tcell_dp,hi,lo,hi,hi,,,,,,
+bcell,lo,hi,,,,,,,,
+nkcell,lo,lo,,,,,,,hi,hi
