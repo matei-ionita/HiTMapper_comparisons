@@ -6,17 +6,18 @@ library(uwot)
 
 ## modify paths to fit your local dir structure
 # dir_data <- "data/vaccine_covid_cytof"
-dir_data <- "data/acute_covid_cytof"
+dir_data <- "data/acute_covid_flow"
 dir_script <- "scripts"
 dir_result <- "results"
-dir_figure <- "plots/acute_cytof"
+dir_figure <- "plots/acute_flow"
+dir_phenos <- "phenos"
 
 source(paste0(dir_script, "/utils.R"))
 
 
 load(paste0(dir_data, "/data.rda"))
-phenos <- read_csv(paste0(dir_data, "/maxpar_phenos_basic.csv"))
-metadata <- read_csv(paste0(dir_data, "/metadata-Acute_COVID_cytof.csv")) %>%
+phenos <- read_csv(paste0(dir_phenos, "/flow_phenos_lineage.csv"))
+metadata <- read_csv(paste0(dir_data, "/OMIQ_metadata-Acute_COVID_flow.csv")) %>%
   select(-OmiqID)
   # mutate(Vaccine = str_remove(Vaccine, ","),
   #        Control = grepl("H", Filename))
@@ -24,14 +25,14 @@ metadata <- read_csv(paste0(dir_data, "/metadata-Acute_COVID_cytof.csv")) %>%
 #### HiTMapper #####
 set.seed(0)
 system.time(mapper <- HiTMapper(data, defs=phenos, resolution = 4))
-save(mapper, file=paste0(dir_result, "/mapper_acute_cytof.rda"))
+save(mapper, file=paste0(dir_result, "/mapper_acute_flow.rda"))
 
 
 #### FlowSOM #####
 ## optional, compare to FlowSOM results
 set.seed(0)
 system.time(fsom <- FlowSOM(data, nClus=12))
-save(fsom, file=paste0(dir_result, "/fsom_acute_cytof.rda"))
+save(fsom, file=paste0(dir_result, "/fsom_acute_flow.rda"))
 flowSOM_clustering <- GetMetaclusters(fsom)
 
 fsom_centroids <- get_centroids(flowSOM_clustering, data)
@@ -54,8 +55,8 @@ pg_clustering <- as.factor(pg_labels[fastpg$communities + 1])
 set.seed(0)
 sel_umap <- sample(nrow(data), 2e5)
 um <- umap(data[sel_umap,], verbose=TRUE)
-# save(um, file=paste0(dir_result, "/umap_acute_cytof.rda"))
-# load(file=paste0(dir_result, "/umap_acute_cytof.rda"))
+# save(um, file=paste0(dir_result, "/umap_acute_flow.rda"))
+# load(file=paste0(dir_result, "/umap_acute_flow.rda"))
 
 df <- as_tibble(data[sel_umap,]) %>%
   mutate(UMAP1 = um[,1], 
