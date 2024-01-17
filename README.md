@@ -4,9 +4,9 @@ Comparison of HiTMapper with manual gating and other algorithms as well as sever
 | Dataset  |  Cytometry Modality  |  Description  |  Reference  |  
 |---------------|---------------|-----------|-----------|
 |  Levine Benchmark Data  |  Mass Cytometry (CyTOF)  |  The data set is a 32-dimensional mass cytometry (CyTOF) data set, consisting of protein expression levels for n = 265,627 cells, p = 32 protein markers (dimensions), and k = 14 manually gated cell populations (clusters), from h = 2 individuals. Cluster labels are available for 39% (104,184) of the cells.  | Levine et al. (2015)  | 
-|  Acute COVID (Day ?)  |  Mass Cytometry (CyTOF)   |  Small subset of the acute COVID flow cytometry data  |  Mathew, Giles, Baxter, Oldridge,  Greenplate, Wu, Alanio, et al. (2020) | 
 |  COVID Vaccine (Day ?)  |  Mass Cytometry (CyTOF)   |  Description  |  Mathew, Giles, Baxter, Oldridge,  Greenplate, Wu, Alanio, et al. (2020)  |  
 |  Acute COVID (Day 0 and Day 7)  | Mass Cytometry (CyTOF)  |  Description  |  Mathew, Giles, Baxter, Oldridge,  Greenplate, Wu, Alanio, et al. (2020)  |  
+|  Acute COVID (Day ?)  |  Flow Cytometry   |  Small subset of the acute COVID flow cytometry data  |  Mathew, Giles, Baxter, Oldridge,  Greenplate, Wu, Alanio, et al. (2020) | 
 
 
 ## Comparison of HiTMapper, FlowSOM, Rphenograph, and FastPG using 32-dimensional CyTOF data from Levine et al
